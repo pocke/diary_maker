@@ -1,0 +1,34 @@
+#!ruby
+
+require 'yaml'
+require 'octokit'
+
+def read_config_file
+  path = File.expand_path('~/.config/diary_maker/config.yaml')
+  YAML.load_file(path)
+end
+
+class Result
+  def initialize(title: nil, url: nil)
+    @title = title
+    @url = url
+  end
+
+  def format
+    "- #{@title} #{@url}"
+  end
+end
+
+def github_pull_requests(token)
+  o = Octokit::Client.new(access_token: token)
+  u = o.user
+  t = Time.now.strftime('%Y-%m-%d')
+  prs = o.search_issues("author:#{u.login} type:pr updated:>=#{t}").items
+
+  prs.map do |pr|
+    Result.new(title: pr.title, url: pr.html_url)
+  end
+end
+
+token = read_config_file['token']
+puts github_pull_requests(token).map(&:format).join("\n")
